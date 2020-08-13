@@ -26,4 +26,4 @@
 ## 鸣谢
 
 特别感谢 [JetBrains](https://www.jetbrains.com/?from=VOCALTTS) 为开源项目提供免费的 [WebStrom](https://www.jetbrains.com/?from=VOCALTTS) 等 IDE 的授权  
-[<img src="https://s1.ax1x.com/2020/08/13/az4yMF.png" width="200"/>](https://www.jetbrains.com/?from=mirai)
+[<img src="https://s1.ax1x.com/2020/08/13/az4yMF.png" width="200"/>](https://www.jetbrains.com/?from=VOCALTTS)
