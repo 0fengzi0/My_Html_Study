@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh" >
+    <head >
+        <meta charset="UTF-8" >
+        <title >贪吃蛇</title >
+        <script src="https://cdn.jsdelivr.net/npm/vue" ></script >
+    </head >
+    <body >
+        <div id="app" >
+            <canvas width="400" height="400" id="canvas" ref="canvas" ></canvas >
+            <div style="text-align: center" >
+                <button id="start" @click="start" >开始</button >
+                <button id="stop" @click="stop" >结束</button >
+                <span >当前积分{{fraction}}</span >
+            </div >
+        </div >
+    </body >
+    <script >
+        
+        // 定义贪吃蛇的组成的方块
+        class Block {
+            col;
+            row;
+            size;
+    
+            constructor(col, row, size) {
+                this.col = col;
+                this.row = row;
+                this.size = size;
+            }
+    
+            draw() {
+                app.$data.context.lineWidth = 1;
+                app.$data.context.strokeStyle = "black";
+                app.$data.context.strokeRect(this.col * this.size, this.row * this.size, this.size, this.size);
+            }
+        }
+
+        // 定义贪吃蛇
+        class Snake {
+            // 蛇身长度
+            body = [new Block(20, 20, 10), new Block(20, 21, 10)];
+            // 移动方向
+            direction = "ArrowUp";
+            apple;
+    
+            constructor(apple) {
+                this.apple = apple;
+            }
+    
+            // 绘制蛇神
+            draw() {
+                // 循环绘制蛇身
+                for (let i = 0; i < this.body.length; i++) {
+                    this.body[i].draw();
+                }
+            }
+    
+            // 移动
+            move() {
+                let head = this.body[0];
+                let newHead;
+                // 移动蛇
+                switch (this.direction) {
+                    case "ArrowUp":
+                        newHead = new Block(head.col, head.row - 1, head.size);
+                        break;
+                    case "ArrowDown":
+                        newHead = new Block(head.col, head.row + 1, head.size);
+                        break;
+                    case "ArrowLeft":
+                        newHead = new Block(head.col - 1, head.row, head.size);
+                        break;
+                    case "ArrowRight":
+                        newHead = new Block(head.col + 1, head.row, head.size);
+                        break;
+                }
+                // 删除老的头部,设置新的
+                this.body.unshift(newHead);
+            }
+    
+            // 碰撞检测
+            impactChecking() {
+                let head = this.body[0];
+                // 检测是否碰到墙壁
+                if (head.col > 40 || head.col < 0 || head.row > 40 || head.row < 0) {
+                    alert("碰墙游戏结束");
+                    clearInterval(window.vm.$data.interval);
+                    window.vm.$data.interval = false;
+                    this.body = [new Block(20, 20, 10), new Block(20, 21, 10)];
+                }
+                // 检测碰到身体
+                for (let i = 1; i < this.body.length; i++) {
+                    if (head.col === this.body[i].col && head.row === this.body[i].row) {
+                        alert("碰到身体游戏结束");
+                        clearInterval(window.vm.$data.interval);
+                        window.vm.$data.interval = false;
+                        this.body = [new Block(20, 20, 10), new Block(20, 21, 10)];
+                    }
+                }
+                // 检测碰到苹果
+                if (head.col === this.apple.col && head.row === this.apple.row) {
+                    window.vm.$data.fraction++;
+                    // 重新生成苹果
+                    this.apple.init();
+                    for (let i = 1; i < this.body.length; i++) {
+                        if (this.body[i].col === this.apple.col && this.body[i].row === this.apple.row) {
+                            this.apple.init();
+                        }
+                    }
+                } else {
+                    // 移除最后一个方块
+                    this.body.pop();
+                }
+            }
+        }
+
+        // 定义贪吃蛇的食物
+        class Apple {
+            // 列
+            col;
+            // 行
+            row;
+            sizeR;
+    
+            constructor() {
+                this.init();
+            }
+    
+            init() {
+                // 生成列坐标
+                this.col = Math.floor(Math.random() * (40 - 1) + 1);
+                // 生成行坐标
+                this.row = Math.floor(Math.random() * (40 - 1) + 1);
+                // 设置苹果半径
+                this.sizeR = 5;
+            }
+    
+            draw() {
+                app.$data.context.fillStyle = "red";
+                // 开始画
+                app.$data.context.beginPath();
+                // 画圆
+                app.$data.context.arc(this.col * this.sizeR * 2 + this.sizeR, this.row * this.sizeR * 2 + this.sizeR, this.sizeR, 0, Math.PI * 2, false);
+                //填充颜色
+                app.$data.context.fill();
+                // 恢复黑色
+                app.$data.context.fillStyle = "black";
+            }
+    
+        }
+
+        let app = new Vue({
+            el: "#app",
+            data() {
+                return {
+                    interval: false,
+                    context: null,
+                    apple: null,
+                    snake: null,
+                    fraction: 0,
+                };
+            },
+            mounted() {
+                window.vm = this;
+                this.context = this.$refs.canvas.getContext("2d");
+                this.apple = new Apple();
+                this.snake = new Snake(this.apple);
+                // 画游戏边框
+                this.context.strokeRect(0, 0, 400, 400);
+        
+                window.onkeydown = (e) => {
+                    switch (e.key) {
+                        case "ArrowUp":
+                        case "ArrowDown":
+                        case "ArrowLeft":
+                        case "ArrowRight":
+                            this.snake.direction = e.key;
+                            break;
+                    }
+                };
+            },
+            methods: {
+                start() {
+                    if (!this.interval) {
+                        this.interval = setInterval(() => {
+                            //清除画板
+                            this.context.clearRect(0, 0, 400, 400);
+                            // 画游戏边框
+                            this.context.strokeRect(0, 0, 400, 400);
+                            // 蛇开始移动
+                            this.snake.move();
+                            // 绘制蛇
+                            this.snake.draw();
+                            // 绘制苹果
+                            this.apple.draw();
+                            // 检测碰撞
+                            this.snake.impactChecking();
+                        }, 200);
+                    }
+                },
+        
+                stop() {
+                    clearInterval(this.interval);
+                    this.interval = false;
+                    this.snake.body = [new Block(20, 20, 10), new Block(20, 21, 10)];
+                    // 清空画板
+                    this.context.clearRect(0, 0, 400, 400);
+                    // 画游戏边框
+                    this.context.strokeRect(0, 0, 400, 400);
+                },
+            },
+        });
+
+    </script >
+    <style >
+        html, body {
+            padding: 0;
+            margin: 0;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #canvas {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #start, #stop {
+            width: 50px;
+            height: 30px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style >
+</html >
