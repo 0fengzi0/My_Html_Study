@@ -1,0 +1,311 @@
+<html lang='zh' >
+<head >
+    <meta charset='UTF-8' >
+    <title >俄罗斯方块</title >
+    <script src='https://cdn.jsdelivr.net/npm/vue' ></script >
+</head >
+<body >
+<div id='app' >
+    <canvas height='400' id='canvas' ref='canvas' width='400' ></canvas >
+    <div style='text-align: center' >
+        <button @click='start' id='start' >开始</button >
+        <button @click='stop' id='stop' >结束</button >
+    </div >
+</div >
+</body >
+
+<script >
+
+    // 俄罗斯方块类
+    class tetris {
+
+        shape;
+        x;
+        y;
+        keyDown = 'ArrowDown';
+        lBlock = [
+            [1, 0, 0, 0],
+            [1, 0, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 0, 0],
+        ];
+        tBlock = [
+            [0, 1, 0, 0],
+            [1, 1, 1, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ];
+        zBlock = [
+            [1, 1, 0, 0],
+            [0, 1, 1, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ];
+        iBlock = [
+            [1, 0, 0, 0],
+            [1, 0, 0, 0],
+            [1, 0, 0, 0],
+            [1, 0, 0, 0],
+        ];
+        oBlock = [
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ];
+
+        constructor() {
+            this.init();
+        }
+
+        init() {
+            let temp = 1;
+            switch (temp) {
+                case 0:
+                    this.shape = this.lBlock;
+                    break;
+                case 1:
+                    this.shape = this.tBlock;
+                    break;
+                case 2:
+                    this.shape = this.zBlock;
+                    break;
+                case 3:
+                    this.shape = this.iBlock;
+                    break;
+                case 4:
+                    this.shape = this.oBlock;
+                    break;
+            }
+            this.x = Math.floor((app.$data.col - this.shape[0].length) / 2);
+            this.y = -this.shape.length;
+        }
+
+        draw() {
+            for (let i = 0; i < this.shape.length; i++) {
+                for (let j = 0; j < this.shape[i].length; j++) {
+                    app.$data.context.fillRect((j + this.x) * 20, (i + this.y) * 20, 20 * this.shape[i][j], 20 * this.shape[i][j]);
+                }
+            }
+        }
+
+        move() {
+            if (this.keyDown === 'ArrowLeft' && !this.impactChecking(-1)) {
+                this.x--;
+            } else if (this.keyDown === 'ArrowRight' && !this.impactChecking(1)) {
+                this.x++;
+            }
+            if (this.keyDown == null && !this.impactChecking(0)) {
+                this.y++;
+            }
+        }
+
+        // 碰撞检测
+        impactChecking(x) {
+            let nextX = x + this.x;
+            let nextY = this.y + 1;
+            for (let i = 0; i < this.shape.length; i++) {
+                for (let j = 0; j < this.shape[i].length; j++) {
+                    if (this.shape[i][j] === 1) {
+                        if (x !== 0) {
+                            if (j + nextX < 0 || j + nextX >= app.$data.row) {
+                                // 左右超界
+                                return true;
+                            } else if (this.y + i >= 0 && this.y + i <= app.$data.row && app.$data.mapList[this.y + i][nextX + j] === 1) {
+                                // 左右碰撞
+                                return true;
+                            }
+                        } else {
+                            if (nextY + i >= app.$data.row) {
+                                // 下方碰撞
+                                this.mergeMap();
+                                return true;
+                            } else if (this.y + i >= 0 && this.y + i <= app.$data.row && app.$data.mapList[nextY + i][this.x + j] === 1) {
+                                // 下方存在物体
+                                this.mergeMap();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 合并方块到地图
+        mergeMap() {
+            for (let i = 0; i < this.shape.length; i++) {
+                for (let j = 0; j < this.shape[i].length; j++) {
+                    if (this.shape[i][j] === 1 && app.$data.mapList[i][j] === 0) {
+                        app.$data.mapList[this.y + i][this.x + j] = 1;
+                    }
+                }
+            }
+            app.$data.context.clearRect(0, 0, 400, 400);
+            // 画游戏边框
+            app.$data.context.strokeRect(0, 0, 400, 400);
+            // 绘制已有方块
+            for (let i = 0; i < app.$data.mapList.length; i++) {
+                for (let j = 0; j < app.$data.mapList[i].length; j++) {
+                    app.$data.context.fillRect(j * 20, i * 20, 20 * app.$data.mapList[i][j], 20 * app.$data.mapList[i][j]);
+                }
+            }
+            this.draw();
+            app.$data.tetris = new tetris();
+        }
+
+        // 旋转方块
+        spinBlock() {
+            let temp = [];
+            let len = this.shape.length;
+            for (let i = 0; i < len; i++) {
+                temp[i] = [];
+                for (let j = 0; j < len; j++) {
+                    temp[i][j] = this.shape[len - 1 - j][i];
+                }
+            }
+            this.shape = window.vm.deepClone(temp);
+
+            app.$data.context.clearRect(0, 0, 400, 400);
+            // 画游戏边框
+            app.$data.context.strokeRect(0, 0, 400, 400);
+            // 绘制已有方块
+            for (let i = 0; i < app.$data.mapList.length; i++) {
+                for (let j = 0; j < app.$data.mapList[i].length; j++) {
+                    app.$data.context.fillRect(j * 20, i * 20, 20 * app.$data.mapList[i][j], 20 * app.$data.mapList[i][j]);
+                }
+            }
+            this.draw();
+        }
+    }
+
+
+    let app = new Vue({
+        el: '#app',
+        data() {
+            return {
+                context: null,
+                tetris: null,
+                mapList: [],
+                col: 20,
+                row: 20,
+                game: null
+            };
+        },
+        mounted() {
+            window.vm = this;
+            this.context = this.$refs.canvas.getContext('2d');
+
+            this.$nextTick(() => {
+                //清除画板
+                this.context.clearRect(0, 0, 400, 400);
+                // 画游戏边框
+                this.context.strokeRect(0, 0, 400, 400);
+                window.onkeydown = (e) => {
+                    switch (e.key) {
+                        case 'ArrowLeft':
+                        case 'ArrowRight':
+                            this.tetris.keyDown = e.key;
+                            this.run();
+                            break;
+                        case 'ArrowUp':
+                            this.tetris.spinBlock();
+                            break;
+                    }
+                };
+            });
+        },
+        methods: {
+            start() {
+                this.tetris = new tetris();
+                this.mapListInit();
+                clearInterval(this.game);
+                this.game = setInterval(() => {
+                    this.tetris.keyDown = null;
+                    this.run();
+                }, 300);
+            },
+            run() {
+                //清除画板
+                this.context.clearRect(0, 0, 400, 400);
+                // 画游戏边框
+                this.context.strokeRect(0, 0, 400, 400);
+                // 绘制已有方块
+                for (let i = 0; i < this.mapList.length; i++) {
+                    for (let j = 0; j < this.mapList[i].length; j++) {
+                        this.context.fillRect(j * 20, i * 20, 20 * this.mapList[i][j], 20 * this.mapList[i][j]);
+                    }
+                }
+                this.tetris.move();
+                this.tetris.draw();
+            },
+
+            // 初始化空地图数组
+            mapListInit() {
+                for (let i = 0; i < this.col; i++) {
+                    this.mapList[i] = new Array(this.row).fill(0);
+                }
+            },
+
+            stop() {
+                clearInterval(this.game);
+                this.game = null;
+                //清除画板
+                this.context.clearRect(0, 0, 400, 400);
+                // 画游戏边框
+                this.context.strokeRect(0, 0, 400, 400);
+            },
+
+            // 对象深拷贝
+            deepClone(data) {
+                let obj;
+                if (data instanceof Array) {
+                    obj = [];
+                } else if (data instanceof Object) {
+                    obj = {};
+                } else {
+                    //不再具有下一层次
+                    return data;
+                }
+                if (data instanceof Array) {
+                    for (let i = 0, len = data.length; i < len; i++) {
+                        obj.push(this.deepClone(data[i]));
+                    }
+                } else if (data instanceof Object) {
+                    for (let key in data) {
+                        obj[key] = this.deepClone(data[key]);
+                    }
+                }
+                return obj;
+            }
+        },
+    });
+
+</script >
+
+<style >
+    html, body {
+        padding: 0;
+        margin: 0;
+    }
+
+    #app {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #canvas {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    #start, #stop {
+        width: 50px;
+        height: 30px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+</style >
+</html >
